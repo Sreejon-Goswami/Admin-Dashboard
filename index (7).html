@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PULSE — Admin Dashboard</title>
+<style>
+  /* ============ TOKENS ============ */
+:root{
+  --bg:#0A0E14;
+  --surface:#12161F;
+  --surface-alt:#171C27;
+  --border:#232938;
+  --text:#E7EAF0;
+  --text-muted:#8890A3;
+  --accent:#C6FF3D;
+  --accent-dim:#8FB82A;
+  --violet:#8B7CF6;
+  --teal:#4FD1C5;
+  --up:#3DDC97;
+  --down:#FF5C7A;
+  --pending:#F5B15C;
+  --radius:14px;
+  --shadow:0 8px 24px rgba(0,0,0,.35);
+  --sidebar-w:240px;
+}
+body.theme-light{
+  --bg:#F3F4F7;
+  --surface:#FFFFFF;
+  --surface-alt:#F7F8FA;
+  --border:#E4E6EC;
+  --text:#161A22;
+  --text-muted:#6B7280;
+  --accent:#7BB616;
+  --accent-dim:#5C8E10;
+  --shadow:0 8px 24px rgba(20,20,30,.08);
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  transition:background .25s ease, color .25s ease;
+  min-height:100vh;
+}
+.app-shell{display:none;}
+.app-shell.show{display:block;}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:-0.02em;}
+p{margin:0;}
+button,input,select{font-family:inherit;}
+::selection{background:var(--accent);color:#0A0E14;}
+
+.mono{font-family:'JetBrains Mono',monospace;}
+
+/* ============ SIDEBAR ============ */
+.sidebar{
+  position:fixed; top:0; left:0; bottom:0; width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column;
+  padding:22px 16px;
+  z-index:40;
+  transition:transform .25s ease;
+}
+.brand{display:flex; align-items:center; gap:10px; padding:0 8px 24px 8px;}
+.brand-mark{color:var(--accent);}
+.pulse-line{fill:none; stroke:var(--accent); stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+.brand-name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:20px; letter-spacing:.04em;}
+
+.nav{display:flex; flex-direction:column; gap:4px; flex:1;}
+.nav-item{
+  display:flex; align-items:center; gap:12px;
+  background:none; border:none; color:var(--text-muted);
+  padding:11px 12px; border-radius:10px; font-size:14.5px; font-weight:500;
+  cursor:pointer; text-align:left; position:relative;
+  transition:background .15s ease, color .15s ease;
+}
+.nav-ico{font-size:14px; width:18px; text-align:center; color:currentColor;}
+.nav-item:hover{background:var(--surface-alt); color:var(--text);}
+.nav-item.active{background:var(--surface-alt); color:var(--accent);}
+.nav-item.active .nav-ico{color:var(--accent);}
+.nav-badge{
+  margin-left:auto; background:var(--accent); color:#0A0E14; font-size:11px;
+  font-weight:700; padding:1px 7px; border-radius:20px;
+}
+.sidebar-footer{border-top:1px solid var(--border); padding-top:14px;}
+.mini-profile{display:flex; align-items:center; gap:10px;}
+.mini-info{display:flex; flex-direction:column; font-size:12.5px; line-height:1.4;}
+.mini-info span{color:var(--text-muted);}
+
+.avatar{
+  width:36px; height:36px; border-radius:50%;
+  background:linear-gradient(135deg, var(--accent), var(--teal));
+  color:#0A0E14; display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:13px; flex-shrink:0;
+}
+.avatar-sm{width:32px; height:32px; font-size:12px;}
+.avatar-lg{width:56px; height:56px; font-size:18px;}
+
+.scrim{position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:35; opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease;}
+
+/* ============ MAIN / TOPBAR ============ */
+.main{margin-left:var(--sidebar-w); min-height:100vh;}
+.topbar{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:16px;
+  padding:14px 28px;
+  background:color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);
+}
+.only-mobile{display:none;}
+.search-box{
+  flex:1; max-width:420px; display:flex; align-items:center; gap:8px;
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:9px 14px;
+}
+.search-box.small{max-width:none; flex:1;}
+.search-ico{color:var(--text-muted);}
+.search-box input{background:none; border:none; outline:none; color:var(--text); width:100%; font-size:13.5px;}
+.search-box input::placeholder{color:var(--text-muted);}
+.topbar-actions{display:flex; align-items:center; gap:10px; margin-left:auto;}
+.icon-btn{
+  width:38px; height:38px; border-radius:10px; border:1px solid var(--border);
+  background:var(--surface); color:var(--text); font-size:15px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.icon-btn:hover{border-color:var(--accent);}
+.dot-badge{
+  position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%;
+  background:var(--down); border:2px solid var(--surface);
+}
+
+/* ============ PAGES ============ */
+.page{display:none; padding:26px 28px 60px 28px; animation:fadeIn .3s ease;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+.page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap;}
+.sub{color:var(--text-muted); font-size:13.5px; margin-top:4px;}
+.sub.small{font-size:12px; margin-top:2px;}
+
+.btn-primary{
+  background:var(--accent); color:#0A0E14; border:none; font-weight:700;
+  padding:10px 18px; border-radius:10px; font-size:13.5px; cursor:pointer;
+  transition:transform .12s ease, filter .12s ease;
+}
+.btn-primary:hover{filter:brightness(1.08); transform:translateY(-1px);}
+.btn-primary.small{padding:8px 14px; font-size:12.5px;}
+
+/* ============ STAT CARDS ============ */
+.stat-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr));
+  gap:16px; margin-bottom:22px;
+}
+.stat-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px; display:flex; flex-direction:column; gap:8px;
+}
+.stat-label{color:var(--text-muted); font-size:12.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;}
+.stat-value{font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:600;}
+.stat-delta{font-size:12px; font-weight:600;}
+.stat-delta.up{color:var(--up);}
+.stat-delta.down{color:var(--down);}
+
+/* ============ PANELS / GRIDS ============ */
+.grid-2{display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px;}
+.grid-3{display:grid; grid-template-columns:1fr 1fr 1.3fr; gap:16px;}
+.grid-cal{display:grid; grid-template-columns:2fr 1fr; gap:16px;}
+.panel{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px;
+}
+.panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+.mini-select{
+  background:var(--surface-alt); border:1px solid var(--border); color:var(--text);
+  padding:7px 10px; border-radius:8px; font-size:12.5px; outline:none;
+}
+
+/* activity */
+.activity-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; max-height:260px; overflow:auto;}
+.activity-list li{display:flex; gap:10px; font-size:13px;}
+.activity-list .dot-line{width:8px; height:8px; border-radius:50%; background:var(--accent); margin-top:5px; flex-shrink:0;}
+.activity-list .act-time{color:var(--text-muted); font-size:11.5px;}
+
+/* ============ TABLE ============ */
+.table-toolbar{display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
+.table-wrap{overflow-x:auto;}
+.data-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+.data-table th{
+  text-align:left; color:var(--text-muted); font-weight:600; font-size:12px;
+  text-transform:uppercase; letter-spacing:.03em; padding:10px 12px; border-bottom:1px solid var(--border);
+}
+.data-table td{padding:12px; border-bottom:1px solid var(--border); vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.name-cell{display:flex; align-items:center; gap:10px;}
+.pill{padding:4px 10px; border-radius:20px; font-size:11.5px; font-weight:700;}
+.pill-active{background:rgba(61,220,151,.14); color:var(--up);}
+.pill-inactive{background:rgba(255,92,122,.14); color:var(--down);}
+.pill-pending{background:rgba(245,177,92,.16); color:var(--pending);}
+.row-actions{display:flex; gap:8px;}
+.row-actions button{
+  background:var(--surface-alt); border:1px solid var(--border); color:var(--text-muted);
+  width:28px; height:28px; border-radius:7px; cursor:pointer; font-size:12px;
+}
+.row-actions button:hover{color:var(--accent); border-color:var(--accent);}
+
+/* ============ KANBAN ============ */
+.board{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+.board-col{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; min-height:200px;}
+.board-col-head{display:flex; align-items:center; gap:8px; font-weight:700; font-size:13.5px; margin-bottom:12px;}
+.board-col-head .count{margin-left:auto; color:var(--text-muted); font-weight:600; font-size:12px;}
+.dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+.dot-pending{background:var(--pending);}
+.dot-active{background:var(--teal);}
+.dot-completed{background:var(--up);}
+.board-cards{display:flex; flex-direction:column; gap:10px;}
+.card{
+  background:var(--surface-alt); border:1px solid var(--border); border-radius:10px;
+  padding:12px; font-size:13px; cursor:grab;
+}
+.card strong{display:block; margin-bottom:6px; font-size:13.5px;}
+.card .meta{display:flex; justify-content:space-between; align-items:center; margin-top:10px; color:var(--text-muted); font-size:11.5px;}
+.avatars-mini{display:flex;}
+.avatars-mini .mini-av{
+  width:22px; height:22px; border-radius:50%; font-size:9.5px; margin-left:-6px;
+  border:2px solid var(--surface-alt); display:flex; align-items:center; justify-content:center;
+  color:#0A0E14; font-weight:700;
+}
+.avatars-mini .mini-av:first-child{margin-left:0;}
+
+/* ============ MESSAGES ============ */
+.inbox-list, .notif-list, .event-list, .country-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; max-height:340px; overflow:auto;}
+.inbox-list li, .notif-list li{
+  display:flex; gap:10px; padding:10px 6px; border-radius:8px; cursor:pointer;
+}
+.inbox-list li:hover, .notif-list li:hover{background:var(--surface-alt);}
+.inbox-list .msg-name{font-weight:600; font-size:13px;}
+.inbox-list .msg-preview{color:var(--text-muted); font-size:12px;}
+.inbox-list .msg-time{margin-left:auto; color:var(--text-muted); font-size:11px; white-space:nowrap;}
+.unread .msg-name::after{content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-left:6px;}
+
+.notif-list li{align-items:flex-start;}
+.notif-ico{width:30px; height:30px; border-radius:8px; background:var(--surface-alt); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+
+.chat-panel{display:flex; flex-direction:column;}
+.chat-thread{flex:1; display:flex; flex-direction:column; gap:10px; min-height:220px; max-height:260px; overflow:auto; padding:4px 2px;}
+.bubble{max-width:78%; padding:9px 13px; border-radius:14px; font-size:13px; line-height:1.4;}
+.bubble.in{background:var(--surface-alt); align-self:flex-start; border-bottom-left-radius:4px;}
+.bubble.out{background:var(--accent); color:#0A0E14; align-self:flex-end; border-bottom-right-radius:4px; font-weight:500;}
+.chat-input{display:flex; gap:8px; margin-top:12px;}
+.chat-input input{
+  flex:1; background:var(--surface-alt); border:1px solid var(--border); border-radius:10px;
+  padding:9px 12px; color:var(--text); outline:none; font-size:13px;
+}
+
+/* ============ CALENDAR ============ */
+.cal-nav{display:flex; gap:8px;}
+.cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+.cal-dow{text-align:center; font-size:11px; color:var(--text-muted); font-weight:700; padding-bottom:6px;}
+.cal-cell{
+  aspect-ratio:1; border-radius:8px; background:var(--surface-alt); border:1px solid transparent;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:6px 2px;
+  font-size:12px; position:relative; color:var(--text-muted);
+}
+.cal-cell.in-month{color:var(--text);}
+.cal-cell.today{border-color:var(--accent); color:var(--accent); font-weight:700;}
+.cal-cell .ev-dot{width:5px; height:5px; border-radius:50%; background:var(--teal); margin-top:4px;}
+.event-list li{
+  display:flex; flex-direction:column; gap:2px; padding:10px; border-radius:8px;
+  border-left:3px solid var(--accent); background:var(--surface-alt); font-size:12.5px;
+}
+.event-list .ev-time{color:var(--text-muted); font-size:11px;}
+
+/* ============ ANALYTICS ============ */
+.country-list li{display:flex; align-items:center; gap:10px; padding:8px 0; font-size:13px;}
+.country-list .bar-track{flex:1; height:6px; background:var(--surface-alt); border-radius:4px; overflow:hidden;}
+.country-list .bar-fill{height:100%; background:linear-gradient(90deg, var(--accent), var(--teal)); border-radius:4px;}
+.country-list .pct{width:38px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-muted);}
+
+/* ============ SETTINGS ============ */
+.settings-row{display:flex; align-items:center; gap:14px; margin-bottom:16px;}
+.settings-row.space-between{justify-content:space-between;}
+.field{display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--text-muted); font-weight:600; margin-bottom:14px;}
+.field input{
+  background:var(--surface-alt); border:1px solid var(--border); border-radius:9px;
+  padding:10px 12px; color:var(--text); font-size:13.5px; outline:none; font-weight:400;
+}
+.field input:focus{border-color:var(--accent);}
+.switch{
+  width:44px; height:25px; border-radius:20px; background:var(--surface-alt); border:1px solid var(--border);
+  cursor:pointer; position:relative; flex-shrink:0;
+}
+.switch-knob{
+  position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%;
+  background:var(--text-muted); transition:transform .2s ease, background .2s ease;
+}
+.switch.on{background:var(--accent-dim);}
+.switch.on .switch-knob{transform:translateX(19px); background:var(--accent);}
+
+/* ============ TOAST ============ */
+.toast{
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--surface); border:1px solid var(--border); color:var(--text);
+  padding:12px 20px; border-radius:10px; box-shadow:var(--shadow); font-size:13px;
+  opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease; z-index:100;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* ============ FOCUS ============ */
+button:focus-visible, input:focus-visible, select:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+/* ============ LOGIN SCREEN ============ */
+.login-screen{
+  position:fixed; inset:0; z-index:200;
+  display:flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 45%),
+    radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--teal) 10%, transparent), transparent 45%),
+    var(--bg);
+  padding:20px;
+  transition:opacity .35s ease, visibility .35s ease;
+}
+.login-screen.hide{opacity:0; visibility:hidden; pointer-events:none;}
+.login-card{
+  width:100%; max-width:380px; background:var(--surface); border:1px solid var(--border);
+  border-radius:18px; padding:32px 28px; box-shadow:var(--shadow);
+  animation:loginRise .5s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes loginRise{ from{opacity:0; transform:translateY(16px) scale(.98);} to{opacity:1; transform:none;} }
+.login-brand{padding:0 0 20px 0; justify-content:center;}
+.login-card h2{font-size:22px; margin-bottom:4px;}
+.login-card .sub{margin-bottom:20px;}
+.login-card .field{margin-bottom:14px;}
+.login-error{
+  display:none; color:var(--down); font-size:12.5px; font-weight:600; margin:-4px 0 12px 0;
+}
+.login-error.show{display:block;}
+.login-submit{width:100%; padding:11px; font-size:14px;}
+.login-divider{display:flex; align-items:center; gap:10px; margin:18px 0; color:var(--text-muted); font-size:11.5px;}
+.login-divider::before, .login-divider::after{content:''; flex:1; height:1px; background:var(--border);}
+.btn-ghost{
+  width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);
+  background:transparent; color:var(--text); font-size:13px; font-weight:600; cursor:pointer;
+}
+.btn-ghost:hover{border-color:var(--accent); color:var(--accent);}
+
+/* ============ OUTLINE BUTTON (exports) ============ */
+.btn-outline{
+  background:var(--surface-alt); border:1px solid var(--border); color:var(--text);
+  padding:8px 14px; border-radius:9px; font-size:12.5px; font-weight:600; cursor:pointer;
+}
+.btn-outline:hover{border-color:var(--accent); color:var(--accent);}
+.filter-group{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+
+/* ============ LOGOUT + BROKEN LINK DEMO ============ */
+.mini-profile{position:relative;}
+.logout-btn{width:32px; height:32px; margin-left:auto; font-size:14px;}
+.broken-link-demo{
+  display:block; font-size:11px; color:var(--text-muted); text-decoration:none;
+  margin-bottom:10px; padding:0 2px;
+}
+.broken-link-demo:hover{color:var(--accent);}
+
+/* ============ 404 PAGE ============ */
+.error-wrap{
+  display:flex; flex-direction:column; align-items:flex-start; gap:10px;
+  max-width:420px; margin:8vh auto 0 auto; text-align:left;
+}
+.error-code{
+  font-family:'Space Grotesk',sans-serif; font-size:88px; font-weight:700; line-height:1;
+  background:linear-gradient(135deg, var(--accent), var(--teal));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.error-wrap .btn-primary{margin-top:10px;}
+
+/* ============ NOTIFICATION LIVE PULSE ============ */
+.dot-badge.live{animation:pulseDot 1.6s ease-in-out infinite;}
+@keyframes pulseDot{
+  0%,100%{ box-shadow:0 0 0 0 color-mix(in srgb, var(--down) 55%, transparent); }
+  50%{ box-shadow:0 0 0 5px color-mix(in srgb, var(--down) 0%, transparent); }
+}
+.notif-list li.new-notif{animation:notifSlide .4s ease;}
+@keyframes notifSlide{ from{opacity:0; transform:translateX(-10px);} to{opacity:1; transform:none;} }
+
+
+@media (max-width:1100px){
+  .grid-2{grid-template-columns:1fr;}
+  .grid-3{grid-template-columns:1fr;}
+  .grid-cal{grid-template-columns:1fr;}
+}
+@media (max-width:860px){
+  .sidebar{
+    transform:translateX(-100%);
+    transition:transform .38s cubic-bezier(.32,.72,0,1);
+    box-shadow:none;
+  }
+  .sidebar.open{
+    transform:translateX(0);
+    box-shadow:16px 0 40px rgba(0,0,0,.35);
+  }
+  .sidebar.open .nav-item{
+    animation:navItemIn .32s cubic-bezier(.2,.8,.2,1) backwards;
+  }
+  .sidebar.open .nav-item:nth-child(1){animation-delay:.04s;}
+  .sidebar.open .nav-item:nth-child(2){animation-delay:.07s;}
+  .sidebar.open .nav-item:nth-child(3){animation-delay:.10s;}
+  .sidebar.open .nav-item:nth-child(4){animation-delay:.13s;}
+  .sidebar.open .nav-item:nth-child(5){animation-delay:.16s;}
+  .sidebar.open .nav-item:nth-child(6){animation-delay:.19s;}
+  .sidebar.open .nav-item:nth-child(7){animation-delay:.22s;}
+  .sidebar.open .nav-item:nth-child(8){animation-delay:.25s;}
+  .main{margin-left:0;}
+  .only-mobile{display:flex;}
+  .scrim.show{opacity:1; visibility:visible;}
+  .board{grid-template-columns:1fr;}
+  .page{padding:20px 16px 50px 16px;}
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+}
+@keyframes navItemIn{
+  from{opacity:0; transform:translateX(-14px);}
+  to{opacity:1; transform:none;}
+}
+@media (max-width:480px){
+  .stat-grid{grid-template-columns:1fr;}
+  .search-box{display:none;}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+}
+
+</style>
+</head>
+<body class="theme-dark">
+
+<!-- ================= LOGIN SCREEN ================= -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="brand login-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 40 24" class="pulse-line" width="40" height="24">
+          <polyline points="0,12 8,12 12,4 16,20 20,8 24,16 28,12 40,12" />
+        </svg>
+      </div>
+      <span class="brand-name">PULSE</span>
+    </div>
+    <h2>Welcome back</h2>
+    <p class="sub">Sign in to access your admin dashboard.</p>
+
+    <form id="loginForm">
+      <label class="field">Email
+        <input type="email" id="loginEmail" placeholder="sreejon@pulse.dev" value="sreejon@pulse.dev" required>
+      </label>
+      <label class="field">Password
+        <input type="password" id="loginPassword" placeholder="••••••••" value="••••••••" required>
+      </label>
+      <p class="login-error" id="loginError">Please enter both email and password.</p>
+      <button type="submit" class="btn-primary login-submit">Sign In</button>
+    </form>
+
+    <div class="login-divider"><span>or</span></div>
+    <button class="btn-ghost" id="guestLoginBtn">Continue as Guest</button>
+  </div>
+</div>
+
+<!-- ================= SIDEBAR ================= -->
+<div class="app-shell" id="appShell">
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 40 24" class="pulse-line" width="40" height="24">
+        <polyline points="0,12 8,12 12,4 16,20 20,8 24,16 28,12 40,12" />
+      </svg>
+    </div>
+    <span class="brand-name">PULSE</span>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-item active" data-page="dashboard">
+      <span class="nav-ico">◆</span><span data-i18n="nav.dashboard">Dashboard</span>
+    </button>
+    <button class="nav-item" data-page="users">
+      <span class="nav-ico">◇</span><span data-i18n="nav.users">Users</span>
+    </button>
+    <button class="nav-item" data-page="projects">
+      <span class="nav-ico">▣</span><span data-i18n="nav.projects">Projects</span>
+    </button>
+    <button class="nav-item" data-page="messages">
+      <span class="nav-ico">✉</span><span data-i18n="nav.messages">Messages</span>
+      <span class="nav-badge" id="msgBadge">3</span>
+    </button>
+    <button class="nav-item" data-page="calendar">
+      <span class="nav-ico">▦</span><span data-i18n="nav.calendar">Calendar</span>
+    </button>
+    <button class="nav-item" data-page="tasks">
+      <span class="nav-ico">☑</span><span data-i18n="nav.tasks">Tasks</span>
+    </button>
+    <button class="nav-item" data-page="analytics">
+      <span class="nav-ico">▲</span><span data-i18n="nav.analytics">Analytics</span>
+    </button>
+    <button class="nav-item" data-page="settings">
+      <span class="nav-ico">⚙</span><span data-i18n="nav.settings">Settings</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <a class="broken-link-demo" href="#/nonexistent" id="brokenLinkDemo">Report an issue ↗</a>
+    <div class="mini-profile">
+      <div class="avatar">SR</div>
+      <div class="mini-info">
+        <strong>Sreejon</strong>
+        <span>Administrator</span>
+      </div>
+      <button class="icon-btn logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">⏻</button>
+    </div>
+  </div>
+</aside>
+
+<div class="scrim" id="scrim"></div>
+
+<!-- ================= MAIN ================= -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <button class="icon-btn only-mobile" id="menuToggle" aria-label="Open menu">☰</button>
+    <div class="search-box">
+      <span class="search-ico">⌕</span>
+      <input type="text" id="globalSearch" placeholder="Search users, projects, tasks...">
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">◐</button>
+      <button class="icon-btn" id="notifBtn" aria-label="Notifications" title="Notifications">
+        🔔<span class="dot-badge" id="notifDot"></span>
+      </button>
+      <div class="avatar avatar-sm">SR</div>
+    </div>
+  </header>
+
+  <!-- ============ PAGE: DASHBOARD ============ -->
+  <section class="page active" id="page-dashboard">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="page.dashboard.title">Overview</h1>
+        <p class="sub" data-i18n="page.dashboard.sub">Welcome back — here's what's happening today.</p>
+      </div>
+      <button class="btn-primary" data-i18n="btn.newReport">+ New Report</button>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total Revenue</span>
+        <span class="stat-value" data-count="1250000" data-prefix="₹">₹0</span>
+        <span class="stat-delta up">▲ 12.4% vs last month</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Total Users</span>
+        <span class="stat-value" data-count="23480">0</span>
+        <span class="stat-delta up">▲ 8.1% vs last month</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Total Sales</span>
+        <span class="stat-value" data-count="9214">0</span>
+        <span class="stat-delta down">▼ 2.3% vs last month</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Active Projects</span>
+        <span class="stat-value" data-count="48">0</span>
+        <span class="stat-delta up">▲ 5 new this week</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Visitors Today</span>
+        <span class="stat-value" data-count="3127">0</span>
+        <span class="stat-delta up">▲ live</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Sales Graph</h3>
+          <select class="mini-select" id="salesRange">
+            <option>Last 7 days</option>
+            <option>Last 30 days</option>
+            <option>Last 12 months</option>
+          </select>
+        </div>
+        <canvas id="salesChart" height="220"></canvas>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Recent Activity</h3></div>
+        <ul class="activity-list" id="activityList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: USERS ============ -->
+  <section class="page" id="page-users">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="page.users.title">Users</h1>
+        <p class="sub" data-i18n="page.users.sub">Manage every account on the platform.</p>
+      </div>
+      <button class="btn-primary" data-i18n="btn.addUser">+ Add User</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Users by Status</h3></div>
+        <canvas id="userStatusChart" height="200"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Users by Role</h3></div>
+        <canvas id="userRoleChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="table-toolbar">
+        <div class="search-box small">
+          <span class="search-ico">⌕</span>
+          <input type="text" id="userSearch" placeholder="Search by name or email...">
+        </div>
+        <div class="filter-group">
+          <select class="mini-select" id="userFilter">
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="pending">Pending</option>
+          </select>
+          <button class="btn-outline" id="exportCsvBtn">⭳ CSV</button>
+          <button class="btn-outline" id="exportPdfBtn">⭳ PDF</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="usersTable">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: PROJECTS ============ -->
+  <section class="page" id="page-projects">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="page.projects.title">Projects</h1>
+        <p class="sub" data-i18n="page.projects.sub">Track delivery across every team.</p>
+      </div>
+      <button class="btn-primary" id="addProjectBtn" data-i18n="btn.newProject">+ New Project</button>
+    </div>
+
+    <div class="board" id="projectBoard">
+      <div class="board-col" data-status="Pending">
+        <div class="board-col-head"><span class="dot dot-pending"></span>Pending <span class="count"></span></div>
+        <div class="board-cards"></div>
+      </div>
+      <div class="board-col" data-status="Active">
+        <div class="board-col-head"><span class="dot dot-active"></span>Active <span class="count"></span></div>
+        <div class="board-cards"></div>
+      </div>
+      <div class="board-col" data-status="Completed">
+        <div class="board-col-head"><span class="dot dot-completed"></span>Completed <span class="count"></span></div>
+        <div class="board-cards"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: MESSAGES ============ -->
+  <section class="page" id="page-messages">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="page.messages.title">Messages</h1>
+        <p class="sub" data-i18n="page.messages.sub">Inbox, alerts and live conversations.</p>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="panel">
+        <div class="panel-head"><h3>Inbox</h3></div>
+        <ul class="inbox-list" id="inboxList"></ul>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Notifications</h3></div>
+        <ul class="notif-list" id="notifList"></ul>
+      </div>
+      <div class="panel chat-panel">
+        <div class="panel-head"><h3>Chat Preview</h3></div>
+        <div class="chat-thread" id="chatThread"></div>
+        <div class="chat-input">
+          <input type="text" placeholder="Type a message..." id="chatInput">
+          <button class="btn-primary small" id="chatSend">Send</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: CALENDAR ============ -->
+  <section class="page" id="page-calendar">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="page.calendar.title">Calendar</h1>
+        <p class="sub" id="calMonthLabel">Meetings, events and tasks for the month.</p>
+      </div>
+      <div class="cal-nav">
+        <button class="icon-btn" id="calPrev">‹</button>
+        <button class="icon-btn" id="calNext">›</button>
+      </div>
+    </div>
+
+    <div class="grid-cal">
+      <div class="panel">
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Upcoming</h3></div>
+        <ul class="event-list" id="eventList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: TASKS ============ -->
+  <section class="page" id="page-tasks">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="page.tasks.title">Tasks</h1>
+        <p class="sub" data-i18n="page.tasks.sub">Drag mentally, click to move — a kanban of everything due.</p>
+      </div>
+      <button class="btn-primary" id="addTaskBtn" data-i18n="btn.addTask">+ Add Task</button>
+    </div>
+
+    <div class="board" id="taskBoard">
+      <div class="board-col" data-status="todo">
+        <div class="board-col-head"><span class="dot dot-pending"></span>To Do <span class="count"></span></div>
+        <div class="board-cards"></div>
+      </div>
+      <div class="board-col" data-status="progress">
+        <div class="board-col-head"><span class="dot dot-active"></span>In Progress <span class="count"></span></div>
+        <div class="board-cards"></div>
+      </div>
+      <div class="board-col" data-status="done">
+        <div class="board-col-head"><span class="dot dot-completed"></span>Completed <span class="count"></span></div>
+        <div class="board-cards"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: ANALYTICS ============ -->
+  <section class="page" id="page-analytics">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="page.analytics.title">Analytics</h1>
+        <p class="sub" data-i18n="page.analytics.sub">Where your traffic and revenue really come from.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Revenue Chart</h3></div>
+        <canvas id="revenueChart" height="220"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Traffic Chart</h3></div>
+        <canvas id="trafficChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Device Usage</h3></div>
+        <canvas id="deviceChart" height="220"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Country-wise Visitors</h3></div>
+        <ul class="country-list" id="countryList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: SETTINGS ============ -->
+  <section class="page" id="page-settings">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="page.settings.title">Settings</h1>
+        <p class="sub" data-i18n="page.settings.sub">Your account, appearance and security.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Profile</h3></div>
+        <div class="settings-row">
+          <div class="avatar avatar-lg">SR</div>
+          <div>
+            <strong>Sreejon</strong>
+            <p class="sub small">sreejon@pulse.dev</p>
+          </div>
+        </div>
+        <label class="field">Display name
+          <input type="text" value="Sreejon">
+        </label>
+        <label class="field">Email
+          <input type="email" value="sreejon@pulse.dev">
+        </label>
+        <button class="btn-primary">Save Changes</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Appearance</h3></div>
+        <div class="settings-row space-between">
+          <div>
+            <strong>Theme</strong>
+            <p class="sub small">Switch between dark and light mode</p>
+          </div>
+          <button class="switch" id="themeSwitch"><span class="switch-knob"></span></button>
+        </div>
+        <div class="settings-row space-between">
+          <div>
+            <strong>Language</strong>
+            <p class="sub small">Interface display language</p>
+          </div>
+          <select class="mini-select" id="langSelect">
+            <option value="en">English</option>
+            <option value="bn">বাংলা</option>
+            <option value="hi">Hindi</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Security</h3></div>
+      <label class="field">Current password
+        <input type="password" placeholder="••••••••">
+      </label>
+      <label class="field">New password
+        <input type="password" placeholder="••••••••">
+      </label>
+      <div class="settings-row space-between">
+        <div>
+          <strong>Two-factor authentication</strong>
+          <p class="sub small">Add an extra layer of security to your account</p>
+        </div>
+        <button class="switch" id="twoFaSwitch"><span class="switch-knob"></span></button>
+      </div>
+      <button class="btn-primary">Update Security</button>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: 404 ============ -->
+  <section class="page" id="page-404">
+    <div class="error-wrap">
+      <span class="error-code">404</span>
+      <h1 data-i18n="page.404.title">Page not found</h1>
+      <p class="sub" data-i18n="page.404.sub">The page you're looking for doesn't exist or was moved.</p>
+      <button class="btn-primary" id="back404Btn" data-i18n="btn.backHome">← Back to Dashboard</button>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  (function(){
+  'use strict';
+
+  /* ================= LOGIN / LOGOUT ================= */
+  const loginScreen = document.getElementById('loginScreen');
+  const appShell = document.getElementById('appShell');
+  const loginForm = document.getElementById('loginForm');
+  const loginError = document.getElementById('loginError');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  function enterApp(){
+    loginScreen.classList.add('hide');
+    appShell.classList.add('show');
+  }
+  function exitApp(){
+    appShell.classList.remove('show');
+    loginScreen.classList.remove('hide');
+    loginError.classList.remove('show');
+  }
+  loginForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value.trim();
+    if(!email || !pass){
+      loginError.classList.add('show');
+      return;
+    }
+    loginError.classList.remove('show');
+    enterApp();
+  });
+  document.getElementById('guestLoginBtn').addEventListener('click', enterApp);
+  logoutBtn.addEventListener('click', exitApp);
+
+  /* ================= THEME ================= */
+  const body = document.body;
+  const themeToggle = document.getElementById('themeToggle');
+  const themeSwitch = document.getElementById('themeSwitch');
+  const twoFaSwitch = document.getElementById('twoFaSwitch');
+  let charts = [];
+
+  function chartColors(){
+    const dark = body.classList.contains('theme-dark');
+    return {
+      grid: dark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)',
+      text: dark ? '#8890A3' : '#6B7280',
+      accent: getCss('--accent'), teal: getCss('--teal'), violet: getCss('--violet')
+    };
+  }
+  function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function setTheme(dark){
+    body.classList.toggle('theme-dark', dark);
+    body.classList.toggle('theme-light', !dark);
+    themeSwitch.classList.toggle('on', dark);
+    rebuildCharts();
+  }
+  themeToggle.addEventListener('click', () => setTheme(!body.classList.contains('theme-dark')));
+  themeSwitch.addEventListener('click', () => setTheme(!body.classList.contains('theme-dark')));
+  twoFaSwitch.addEventListener('click', () => {
+    twoFaSwitch.classList.toggle('on');
+    showToast(twoFaSwitch.classList.contains('on') ? 'Two-factor authentication enabled' : 'Two-factor authentication disabled');
+  });
+  setTheme(true);
+
+  /* ================= NAVIGATION (hash router) ================= */
+  const navItems = document.querySelectorAll('.nav-item');
+  const pages = document.querySelectorAll('.page');
+  const sidebar = document.getElementById('sidebar');
+  const scrim = document.getElementById('scrim');
+  const menuToggle = document.getElementById('menuToggle');
+  const VALID_PAGES = ['dashboard','users','projects','messages','calendar','tasks','analytics','settings'];
+
+  function showPage(target){
+    const isValid = VALID_PAGES.includes(target);
+    const pageId = isValid ? 'page-' + target : 'page-404';
+    pages.forEach(p => p.classList.toggle('active', p.id === pageId));
+    navItems.forEach(b => b.classList.toggle('active', isValid && b.dataset.page === target));
+    if(target === 'messages'){ clearNotifBadge(); }
+    closeSidebar();
+    setTimeout(rebuildCharts, 50);
+  }
+
+  function resolveRoute(){
+    const raw = location.hash.replace('#/', '').trim();
+    showPage(raw || 'dashboard');
+  }
+
+  navItems.forEach(btn => {
+    btn.addEventListener('click', () => { location.hash = '#/' + btn.dataset.page; });
+  });
+  document.getElementById('back404Btn').addEventListener('click', () => { location.hash = '#/dashboard'; });
+  window.addEventListener('hashchange', resolveRoute);
+
+  function openSidebar(){ sidebar.classList.add('open'); scrim.classList.add('show'); }
+  function closeSidebar(){ sidebar.classList.remove('open'); scrim.classList.remove('show'); }
+  menuToggle.addEventListener('click', openSidebar);
+  scrim.addEventListener('click', closeSidebar);
+  resolveRoute();
+
+  /* ================= TOAST ================= */
+  const toastEl = document.getElementById('toast');
+  let toastTimer;
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+
+  /* ================= STAT COUNT-UP ================= */
+  function animateCount(el){
+    const target = parseInt(el.dataset.count, 10);
+    const prefix = el.dataset.prefix || '';
+    const dur = 900;
+    const start = performance.now();
+    function step(now){
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = Math.round(target * eased);
+      el.textContent = prefix + val.toLocaleString('en-IN');
+      if(p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  document.querySelectorAll('.stat-value[data-count]').forEach(animateCount);
+
+  /* ================= FAKE DATA ================= */
+  const FIRST = ['Ariana','Rohan','Meera','Kabir','Zoya','Aditya','Nina','Farhan','Ishita','Rafiq','Priya','Sam','Tanvir','Leela','Omar','Divya','Nabil','Sara','Karim','Anya'];
+  const LAST = ['Sen','Khan','Roy','Ahmed','Das','Chowdhury','Iqbal','Verma','Hoque','Bose','Rahman','Nair','Gupta','Islam','Mitra'];
+  const ROLES = ['Admin','Editor','Seller','Customer','Support'];
+  const STATUSES = ['active','inactive','pending'];
+
+  function rand(n){ return Math.floor(Math.random()*n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+
+  const users = Array.from({length: 24}).map((_,i) => {
+    const name = pick(FIRST)+' '+pick(LAST);
+    const status = pick(STATUSES);
+    return {
+      id: i+1, name,
+      email: name.toLowerCase().replace(' ','.')+'@mail.com',
+      role: pick(ROLES), status,
+      joined: `${1+rand(28)} ${pick(['Jan','Feb','Mar','Apr','May','Jun'])} 2026`
+    };
+  });
+
+  let lastRenderedUsers = users;
+  function renderUsers(list){
+    lastRenderedUsers = list;
+    const body = document.getElementById('usersBody');
+    body.innerHTML = list.map(u => `
+      <tr>
+        <td><div class="name-cell"><div class="avatar avatar-sm">${initials(u.name)}</div>${u.name}</div></td>
+        <td>${u.email}</td>
+        <td>${u.role}</td>
+        <td><span class="pill pill-${u.status}">${cap(u.status)}</span></td>
+        <td>${u.joined}</td>
+        <td><div class="row-actions"><button title="Edit">✎</button><button title="Delete">🗑</button></div></td>
+      </tr>
+    `).join('');
+  }
+  function initials(name){ return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+  function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+  renderUsers(users);
+
+  document.getElementById('userSearch').addEventListener('input', applyUserFilter);
+  document.getElementById('userFilter').addEventListener('change', applyUserFilter);
+  function applyUserFilter(){
+    const q = document.getElementById('userSearch').value.toLowerCase();
+    const f = document.getElementById('userFilter').value;
+    const filtered = users.filter(u =>
+      (u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)) &&
+      (f === 'all' || u.status === f)
+    );
+    renderUsers(filtered);
+  }
+
+  /* ================= PROJECTS (board) ================= */
+  const projectNames = ['Nebula Redesign','Checkout Revamp','Seller Onboarding','Mobile App v2','API Gateway','Dark Mode Rollout','Payment Retry Flow','Search Relevance','Admin Analytics','Loyalty Program'];
+  const projects = projectNames.map((name,i) => ({
+    name,
+    status: ['Pending','Active','Completed'][rand(3)],
+    team: Array.from({length: 1+rand(3)}).map(()=>initials(pick(FIRST)+' '+pick(LAST))),
+    deadline: `${1+rand(28)} ${pick(['Jul','Aug','Sep'])} 2026`
+  }));
+  function renderBoard(containerId, items, statusKey, labelFn){
+    const cols = document.querySelectorAll('#'+containerId+' .board-col');
+    cols.forEach(col => {
+      const status = col.dataset.status;
+      const matching = items.filter(it => it[statusKey] === status);
+      col.querySelector('.count').textContent = matching.length;
+      col.querySelector('.board-cards').innerHTML = matching.map(labelFn).join('');
+    });
+  }
+  function projectCardTpl(p){
+    return `
+    <div class="card">
+      <strong>${p.name}</strong>
+      <div class="meta">
+        <div class="avatars-mini">${p.team.map(t=>`<span class="mini-av" style="background:var(--accent)">${t}</span>`).join('')}</div>
+        <span>${p.deadline}</span>
+      </div>
+    </div>`;
+  }
+  function renderProjectBoard(){ renderBoard('projectBoard', projects, 'status', projectCardTpl); }
+  renderProjectBoard();
+
+  /* ================= TASKS (board) ================= */
+  const taskTitles = ['Fix cart totals bug','Write Q3 report','Design email templates','Review PR #482','Update seller docs','Plan sprint retro','Optimize product images','Set up A/B test','Migrate legacy DB','Customer follow-ups'];
+  let tasks = taskTitles.map((title,i) => ({
+    id:i, title,
+    status: ['todo','progress','done'][rand(3)],
+    due: `${1+rand(28)} Jul`
+  }));
+  function renderTasks(){
+    renderBoard('taskBoard', tasks, 'status', t => `
+      <div class="card" data-id="${t.id}">
+        <strong>${t.title}</strong>
+        <div class="meta"><span>Due ${t.due}</span><span>#${t.id+1}</span></div>
+      </div>
+    `);
+    // click to advance status
+    document.querySelectorAll('#taskBoard .card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = parseInt(card.dataset.id,10);
+        const order = ['todo','progress','done'];
+        const t = tasks.find(x=>x.id===id);
+        const next = order[(order.indexOf(t.status)+1) % order.length];
+        t.status = next;
+        renderTasks();
+        showToast(`"${t.title}" moved to ${next === 'todo' ? 'To Do' : next === 'progress' ? 'In Progress' : 'Completed'}`);
+      });
+    });
+  }
+  renderTasks();
+  document.getElementById('addTaskBtn').addEventListener('click', () => {
+    const id = tasks.length;
+    tasks.push({id, title:'New task '+ (id+1), status:'todo', due:'TBD'});
+    renderTasks();
+    showToast('Task added');
+  });
+
+  /* ================= ACTIVITY ================= */
+  const activities = [
+    ['Rohan Khan created a new project', '2m ago'],
+    ['Payment received from Zoya Ahmed', '14m ago'],
+    ['Meera Das updated Seller Onboarding', '38m ago'],
+    ['New user Ishita Bose registered', '1h ago'],
+    ['Kabir Roy closed 3 support tickets', '2h ago'],
+    ['System backup completed', '3h ago'],
+  ];
+  document.getElementById('activityList').innerHTML = activities.map(([t,time]) => `
+    <li><span class="dot-line"></span><div><div>${t}</div><span class="act-time">${time}</span></div></li>
+  `).join('');
+
+  /* ================= MESSAGES ================= */
+  const inbox = [
+    ['Rafiq Islam','Can you review the latest export?', '9:41 AM', true],
+    ['Priya Nair','Thanks, that fixed it!', 'Yesterday', false],
+    ['Farhan Hoque','Invoice #2291 is overdue', 'Yesterday', true],
+    ['Support Bot','Ticket #884 auto-resolved', 'Mon', false],
+    ['Anya Gupta','Loved the new dashboard 🎉', 'Mon', false],
+  ];
+  document.getElementById('inboxList').innerHTML = inbox.map(([name,prev,time,unread]) => `
+    <li class="${unread?'unread':''}">
+      <div class="avatar avatar-sm">${initials(name)}</div>
+      <div><div class="msg-name">${name}</div><div class="msg-preview">${prev}</div></div>
+      <div class="msg-time">${time}</div>
+    </li>
+  `).join('');
+
+  const notifs = [
+    ['💰','New sale — ₹4,200 order placed'],
+    ['⚠️','Server load above 80% for 5 minutes'],
+    ['👤','3 new users signed up today'],
+    ['📦','Order #10432 shipped'],
+  ];
+  function renderNotifList(){
+    document.getElementById('notifList').innerHTML = notifs.map(([ico,text],i) => `
+      <li class="${i===0 ? 'new-notif':''}"><div class="notif-ico">${ico}</div><div>${text}</div></li>
+    `).join('');
+  }
+  renderNotifList();
+
+  const chatThread = document.getElementById('chatThread');
+  const seedChat = [
+    ['in','Hey, are the new banners live yet?'],
+    ['out','Just pushed — check the homepage now.'],
+    ['in','Looks great! One typo on the CTA though.'],
+  ];
+  function addBubble(side, text){
+    const div = document.createElement('div');
+    div.className = 'bubble ' + side;
+    div.textContent = text;
+    chatThread.appendChild(div);
+    chatThread.scrollTop = chatThread.scrollHeight;
+  }
+  seedChat.forEach(([side,text]) => addBubble(side,text));
+  document.getElementById('chatSend').addEventListener('click', sendChat);
+  document.getElementById('chatInput').addEventListener('keydown', e => { if(e.key==='Enter') sendChat(); });
+  function sendChat(){
+    const input = document.getElementById('chatInput');
+    const val = input.value.trim();
+    if(!val) return;
+    addBubble('out', val);
+    input.value = '';
+    setTimeout(() => addBubble('in', 'Got it 👍'), 700);
+  }
+
+  /* ================= CALENDAR ================= */
+  let calDate = new Date(2026,6,1); // July 2026
+  const calEvents = { 3:'Design sync', 8:'Investor call', 12:'Sprint planning', 18:'Product demo', 24:'Payroll run', 29:'Team offsite' };
+  function renderCalendar(){
+    const grid = document.getElementById('calGrid');
+    const label = document.getElementById('calMonthLabel');
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    label.textContent = `${monthNames[calDate.getMonth()]} ${calDate.getFullYear()} — meetings, events and tasks.`;
+
+    const firstDay = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
+    const daysInMonth = new Date(calDate.getFullYear(), calDate.getMonth()+1, 0).getDate();
+    const today = new Date();
+
+    let html = ['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+    for(let i=0;i<firstDay;i++) html += `<div class="cal-cell"></div>`;
+    for(let d=1; d<=daysInMonth; d++){
+      const isToday = today.getFullYear()===calDate.getFullYear() && today.getMonth()===calDate.getMonth() && today.getDate()===d;
+      html += `<div class="cal-cell in-month ${isToday?'today':''}">${d}${calEvents[d] ? '<span class="ev-dot"></span>':''}</div>`;
+    }
+    grid.innerHTML = html;
+
+    const evList = document.getElementById('eventList');
+    evList.innerHTML = Object.entries(calEvents).map(([day,title]) => `
+      <li><strong>${title}</strong><span class="ev-time">${monthNames[calDate.getMonth()].slice(0,3)} ${day}, 2026</span></li>
+    `).join('');
+  }
+  document.getElementById('calPrev').addEventListener('click', () => { calDate.setMonth(calDate.getMonth()-1); renderCalendar(); });
+  document.getElementById('calNext').addEventListener('click', () => { calDate.setMonth(calDate.getMonth()+1); renderCalendar(); });
+  renderCalendar();
+
+  /* ================= COUNTRY LIST ================= */
+  const countries = [['India',42],['Bangladesh',21],['USA',14],['UK',9],['Germany',7],['Others',7]];
+  document.getElementById('countryList').innerHTML = countries.map(([name,pct]) => `
+    <li><span style="width:80px">${name}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="pct">${pct}%</span></li>
+  `).join('');
+
+  /* ================= CHARTS ================= */
+  function rebuildCharts(){
+    charts.forEach(c => c.destroy());
+    charts = [];
+    const c = chartColors();
+    const commonScales = {
+      x: { grid:{ color:'transparent' }, ticks:{ color:c.text, font:{ family:'JetBrains Mono', size:11 } } },
+      y: { grid:{ color:c.grid }, ticks:{ color:c.text, font:{ family:'JetBrains Mono', size:11 } } }
+    };
+
+    // Sales chart — data depends on selected range (interactive)
+    const salesRangeSel = document.getElementById('salesRange');
+    const SALES_DATA = {
+      '0': { labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], data:[42,58,49,72,66,88,95] },
+      '1': { labels:Array.from({length:30},(_,i)=>String(i+1)), data:Array.from({length:30},()=>30+rand(70)) },
+      '2': { labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], data:[520,610,580,700,660,740,810,760,880,900,950,1020] }
+    };
+    const rangeIdx = salesRangeSel ? salesRangeSel.selectedIndex : 0;
+    const rangeSet = SALES_DATA[String(rangeIdx)];
+    charts.push(new Chart(document.getElementById('salesChart'), {
+      type:'line',
+      data:{
+        labels:rangeSet.labels,
+        datasets:[{
+          label:'Sales', data:rangeSet.data,
+          borderColor:c.accent, backgroundColor:hexAlpha(c.accent,.15),
+          fill:true, tension:.4, pointRadius:rangeIdx===1?0:3, pointBackgroundColor:c.accent
+        }]
+      },
+      options:{ plugins:{legend:{display:false}, tooltip:{mode:'index', intersect:false}}, scales:commonScales, responsive:true, maintainAspectRatio:true, interaction:{mode:'nearest', axis:'x', intersect:false} }
+    }));
+
+    // Revenue chart
+    charts.push(new Chart(document.getElementById('revenueChart'), {
+      type:'bar',
+      data:{
+        labels:['Jan','Feb','Mar','Apr','May','Jun','Jul'],
+        datasets:[{ label:'Revenue (₹k)', data:[820,910,860,1020,980,1150,1250], backgroundColor:c.accent, borderRadius:6, maxBarThickness:28 }]
+      },
+      options:{ plugins:{legend:{display:false}}, scales:commonScales, responsive:true }
+    }));
+
+    // Traffic chart
+    charts.push(new Chart(document.getElementById('trafficChart'), {
+      type:'line',
+      data:{
+        labels:['Jan','Feb','Mar','Apr','May','Jun','Jul'],
+        datasets:[
+          { label:'Organic', data:[3200,3600,3400,4100,4400,4800,5200], borderColor:c.teal, backgroundColor:'transparent', tension:.4 },
+          { label:'Paid', data:[1800,2000,2200,2100,2500,2600,2900], borderColor:c.violet, backgroundColor:'transparent', tension:.4 }
+        ]
+      },
+      options:{ plugins:{legend:{labels:{color:c.text, font:{family:'Inter', size:11}}}}, scales:commonScales, responsive:true }
+    }));
+
+    // Device chart
+    charts.push(new Chart(document.getElementById('deviceChart'), {
+      type:'doughnut',
+      data:{
+        labels:['Mobile','Desktop','Tablet'],
+        datasets:[{ data:[58,34,8], backgroundColor:[c.accent, c.violet, c.teal], borderWidth:0 }]
+      },
+      options:{ plugins:{legend:{position:'bottom', labels:{color:c.text, font:{family:'Inter', size:11}}}}, cutout:'65%', responsive:true }
+    }));
+
+    // Users by Status — computed live from the users[] array
+    const statusCounts = { active:0, inactive:0, pending:0 };
+    users.forEach(u => statusCounts[u.status]++);
+    charts.push(new Chart(document.getElementById('userStatusChart'), {
+      type:'doughnut',
+      data:{
+        labels:['Active','Inactive','Pending'],
+        datasets:[{ data:[statusCounts.active, statusCounts.inactive, statusCounts.pending],
+          backgroundColor:[c.accent, c.violet, '#F5B15C'], borderWidth:0 }]
+      },
+      options:{ plugins:{legend:{position:'bottom', labels:{color:c.text, font:{family:'Inter', size:11}}}}, cutout:'60%', responsive:true }
+    }));
+
+    // Users by Role — computed live from the users[] array
+    const roleCounts = {};
+    ROLES.forEach(r => roleCounts[r] = 0);
+    users.forEach(u => roleCounts[u.role]++);
+    charts.push(new Chart(document.getElementById('userRoleChart'), {
+      type:'bar',
+      data:{
+        labels:Object.keys(roleCounts),
+        datasets:[{ label:'Users', data:Object.values(roleCounts), backgroundColor:c.teal, borderRadius:6, maxBarThickness:36 }]
+      },
+      options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:commonScales, responsive:true }
+    }));
+  }
+  function hexAlpha(hex, alpha){
+    // hex like #C6FF3D
+    const h = hex.replace('#','');
+    const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  rebuildCharts();
+  const salesRangeEl = document.getElementById('salesRange');
+  if(salesRangeEl) salesRangeEl.addEventListener('change', rebuildCharts);
+
+  /* ================= NOTIFICATIONS (bell + live updates) ================= */
+  const notifBtn = document.getElementById('notifBtn');
+  const notifDot = document.getElementById('notifDot');
+  const msgBadge = document.getElementById('msgBadge');
+  let unreadCount = parseInt(msgBadge.textContent, 10) || 0;
+
+  function clearNotifBadge(){
+    notifDot.style.display = 'none';
+    notifDot.classList.remove('live');
+    unreadCount = 0;
+    msgBadge.textContent = '0';
+    msgBadge.style.display = 'none';
+  }
+  function bumpNotifBadge(){
+    unreadCount++;
+    msgBadge.textContent = unreadCount;
+    msgBadge.style.display = 'inline-block';
+    notifDot.style.display = 'block';
+    notifDot.classList.add('live');
+  }
+  notifBtn.addEventListener('click', () => {
+    showToast(`${notifs.length} notifications — newest: "${notifs[0][1]}"`);
+    location.hash = '#/messages';
+  });
+
+  const LIVE_EVENTS = [
+    ['💰','New order placed — ₹'+ (1000+rand(8000)).toLocaleString('en-IN')],
+    ['👤','A new user just signed up'],
+    ['📦','Order shipped to customer'],
+    ['⭐','New 5-star review received'],
+    ['⚠️','Server latency spike detected'],
+    ['💬','New reply in support inbox'],
+  ];
+  function pushLiveNotification(){
+    const [ico,text] = pick(LIVE_EVENTS);
+    notifs.unshift([ico, text]);
+    renderNotifList();
+    bumpNotifBadge();
+    showToast('🔔 ' + text);
+  }
+  setInterval(pushLiveNotification, 16000);
+
+  /* ================= NEW PROJECT BUTTON ================= */
+  document.getElementById('addProjectBtn').addEventListener('click', () => {
+    const name = `New Initiative ${projects.length + 1}`;
+    projects.push({
+      name,
+      status: 'Pending',
+      team: [initials(pick(FIRST)+' '+pick(LAST))],
+      deadline: 'TBD'
+    });
+    renderProjectBoard();
+    showToast(`"${name}" added to Pending`);
+  });
+
+  /* ================= EXPORT CSV / PDF ================= */
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    const rows = [['Name','Email','Role','Status','Joined'], ...lastRenderedUsers.map(u => [u.name,u.email,u.role,u.status,u.joined])];
+    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'pulse-users.csv';
+    link.click();
+    showToast(`Exported ${lastRenderedUsers.length} users as CSV`);
+  });
+
+  document.getElementById('exportPdfBtn').addEventListener('click', () => {
+    if(!window.jspdf){ showToast('PDF library failed to load'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('PULSE — Users Export', 14, 18);
+    doc.setFontSize(10);
+    doc.text(`${lastRenderedUsers.length} users`, 14, 25);
+    let y = 36;
+    doc.setFontSize(11);
+    lastRenderedUsers.forEach((u, i) => {
+      if(y > 280){ doc.addPage(); y = 20; }
+      doc.text(`${i+1}. ${u.name}  |  ${u.email}  |  ${u.role}  |  ${cap(u.status)}  |  ${u.joined}`, 14, y);
+      y += 7;
+    });
+    doc.save('pulse-users.pdf');
+    showToast(`Exported ${lastRenderedUsers.length} users as PDF`);
+  });
+
+  /* ================= EXPORT CSV / PDF end ================= */
+
+  /* ================= MULTI-LANGUAGE ================= */
+  const I18N = {
+    en: {
+      'nav.dashboard':'Dashboard','nav.users':'Users','nav.projects':'Projects','nav.messages':'Messages',
+      'nav.calendar':'Calendar','nav.tasks':'Tasks','nav.analytics':'Analytics','nav.settings':'Settings',
+      'page.dashboard.title':'Overview','page.dashboard.sub':"Welcome back — here's what's happening today.",
+      'page.users.title':'Users','page.users.sub':'Manage every account on the platform.',
+      'page.projects.title':'Projects','page.projects.sub':'Track delivery across every team.',
+      'page.messages.title':'Messages','page.messages.sub':'Inbox, alerts and live conversations.',
+      'page.calendar.title':'Calendar',
+      'page.tasks.title':'Tasks','page.tasks.sub':'Drag mentally, click to move — a kanban of everything due.',
+      'page.analytics.title':'Analytics','page.analytics.sub':'Where your traffic and revenue really come from.',
+      'page.settings.title':'Settings','page.settings.sub':'Your account, appearance and security.',
+      'page.404.title':'Page not found','page.404.sub':"The page you're looking for doesn't exist or was moved.",
+      'btn.newReport':'+ New Report','btn.addUser':'+ Add User','btn.newProject':'+ New Project',
+      'btn.addTask':'+ Add Task','btn.backHome':'← Back to Dashboard'
+    },
+    bn: {
+      'nav.dashboard':'ড্যাশবোর্ড','nav.users':'ইউজার','nav.projects':'প্রজেক্ট','nav.messages':'মেসেজ',
+      'nav.calendar':'ক্যালেন্ডার','nav.tasks':'টাস্ক','nav.analytics':'অ্যানালিটিক্স','nav.settings':'সেটিংস',
+      'page.dashboard.title':'ওভারভিউ','page.dashboard.sub':'স্বাগতম — আজকের আপডেট দেখে নাও।',
+      'page.users.title':'ইউজার','page.users.sub':'সব অ্যাকাউন্ট এখান থেকে ম্যানেজ করো।',
+      'page.projects.title':'প্রজেক্ট','page.projects.sub':'প্রতিটা টিমের ডেলিভারি ট্র্যাক করো।',
+      'page.messages.title':'মেসেজ','page.messages.sub':'ইনবক্স, অ্যালার্ট আর লাইভ চ্যাট।',
+      'page.calendar.title':'ক্যালেন্ডার',
+      'page.tasks.title':'টাস্ক','page.tasks.sub':'ক্লিক করে স্ট্যাটাস পাল্টাও — সব কাজের কানবান।',
+      'page.analytics.title':'অ্যানালিটিক্স','page.analytics.sub':'ট্রাফিক আর রেভিনিউ আসলে কোথা থেকে আসছে।',
+      'page.settings.title':'সেটিংস','page.settings.sub':'তোমার অ্যাকাউন্ট, থিম আর সিকিউরিটি।',
+      'page.404.title':'পেজ পাওয়া যায়নি','page.404.sub':'তুমি যে পেজ খুঁজছো সেটা নেই বা সরিয়ে ফেলা হয়েছে।',
+      'btn.newReport':'+ নতুন রিপোর্ট','btn.addUser':'+ ইউজার যোগ করো','btn.newProject':'+ নতুন প্রজেক্ট',
+      'btn.addTask':'+ টাস্ক যোগ করো','btn.backHome':'← ড্যাশবোর্ডে ফিরে যাও'
+    },
+    hi: {
+      'nav.dashboard':'डैशबोर्ड','nav.users':'यूज़र्स','nav.projects':'प्रोजेक्ट्स','nav.messages':'मैसेज',
+      'nav.calendar':'कैलेंडर','nav.tasks':'टास्क','nav.analytics':'एनालिटिक्स','nav.settings':'सेटिंग्स',
+      'page.dashboard.title':'ओवरव्यू','page.dashboard.sub':'वापसी पर स्वागत है — आज का अपडेट देखें।',
+      'page.users.title':'यूज़र्स','page.users.sub':'प्लेटफ़ॉर्म के हर अकाउंट को यहां से मैनेज करें।',
+      'page.projects.title':'प्रोजेक्ट्स','page.projects.sub':'हर टीम की डिलीवरी ट्रैक करें।',
+      'page.messages.title':'मैसेज','page.messages.sub':'इनबॉक्स, अलर्ट और लाइव बातचीत।',
+      'page.calendar.title':'कैलेंडर',
+      'page.tasks.title':'टास्क','page.tasks.sub':'क्लिक करके स्टेटस बदलें — हर काम का कानबन।',
+      'page.analytics.title':'एनालिटिक्स','page.analytics.sub':'ट्रैफ़िक और रेवेन्यू असल में कहां से आ रहे हैं।',
+      'page.settings.title':'सेटिंग्स','page.settings.sub':'आपका अकाउंट, थीम और सिक्योरिटी।',
+      'page.404.title':'पेज नहीं मिला','page.404.sub':'जो पेज आप ढूंढ रहे हैं वह मौजूद नहीं है या हटा दिया गया है।',
+      'btn.newReport':'+ नई रिपोर्ट','btn.addUser':'+ यूज़र जोड़ें','btn.newProject':'+ नया प्रोजेक्ट',
+      'btn.addTask':'+ टास्क जोड़ें','btn.backHome':'← डैशबोर्ड पर वापस जाएं'
+    }
+  };
+  function applyLanguage(lang){
+    const dict = I18N[lang] || I18N.en;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if(dict[key]) el.textContent = dict[key];
+    });
+  }
+  document.getElementById('langSelect').addEventListener('change', e => applyLanguage(e.target.value));
+
+  document.getElementById('globalSearch').addEventListener('keydown', e => {
+    if(e.key === 'Enter' && e.target.value.trim()){
+      showToast(`Searching for "${e.target.value.trim()}"...`);
+    }
+  });
+
+})();
+
+</script>
+</body>
+</html>
